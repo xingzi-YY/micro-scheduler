@@ -10,6 +10,7 @@ import (
 	"micro-scheduler/internal/biz"
 	"micro-scheduler/internal/conf"
 	"micro-scheduler/internal/data"
+	registryInternal "micro-scheduler/internal/registry"
 	"micro-scheduler/internal/server"
 	"micro-scheduler/internal/service"
 	"github.com/go-kratos/kratos/v2"
@@ -23,7 +24,11 @@ import (
 // Injectors from wire.go:
 
 // wireApp init kratos application.
-func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger) (*kratos.App, func(), error) {
+func wireApp(confServer *conf.Server, confData *conf.Data, confRegistry *conf.Registry, logger log.Logger) (*kratos.App, func(), error) {
+	registrar, _, err := registryInternal.NewRegistry(confRegistry)
+	if err != nil {
+		return nil, nil, err
+	}
 	dataData, cleanup, err := data.NewData(confData, logger)
 	if err != nil {
 		return nil, nil, err
@@ -33,7 +38,7 @@ func wireApp(confServer *conf.Server, confData *conf.Data, logger log.Logger) (*
 	greeterService := service.NewGreeterService(greeterUsecase)
 	grpcServer := server.NewGRPCServer(confServer, greeterService, logger)
 	httpServer := server.NewHTTPServer(confServer, greeterService, logger)
-	app := newApp(logger, grpcServer, httpServer)
+	app := newAppWithRegistry(logger, grpcServer, httpServer, registrar)
 	return app, func() {
 		cleanup()
 	}, nil

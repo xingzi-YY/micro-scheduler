@@ -13,6 +13,7 @@ import (
 	"github.com/go-kratos/kratos/v2/middleware/tracing"
 	"github.com/go-kratos/kratos/v2/transport/grpc"
 	"github.com/go-kratos/kratos/v2/transport/http"
+	"github.com/go-kratos/kratos/v2/registry"
 
 	_ "go.uber.org/automaxprocs"
 )
@@ -20,9 +21,9 @@ import (
 // go build -ldflags "-X main.Version=x.y.z"
 var (
 	// Name is the name of the compiled software.
-	Name string
+	Name = "micro-scheduler"
 	// Version is the version of the compiled software.
-	Version string
+	Version = "v1.0.0"
 	// flagconf is the config flag.
 	flagconf string
 
@@ -44,6 +45,21 @@ func newApp(logger log.Logger, gs *grpc.Server, hs *http.Server) *kratos.App {
 			gs,
 			hs,
 		),
+	)
+}
+
+func newAppWithRegistry(logger log.Logger, gs *grpc.Server, hs *http.Server, r registry.Registrar) *kratos.App {
+	return kratos.New(
+		kratos.ID(id),
+		kratos.Name(Name),
+		kratos.Version(Version),
+		kratos.Metadata(map[string]string{}),
+		kratos.Logger(logger),
+		kratos.Server(
+			gs,
+			hs,
+		),
+		kratos.Registrar(r),
 	)
 }
 
@@ -74,7 +90,7 @@ func main() {
 		panic(err)
 	}
 
-	app, cleanup, err := wireApp(bc.Server, bc.Data, logger)
+	app, cleanup, err := wireApp(bc.Server, bc.Data, bc.Registry, logger)
 	if err != nil {
 		panic(err)
 	}
