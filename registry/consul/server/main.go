@@ -28,7 +28,7 @@ func main() {
 	// 加载配置文件
 	c := config.New(
 		config.WithSource(
-			file.NewSource("../../configs/config.yaml"),
+			file.NewSource("configs/config.yaml"),
 		),
 	)
 	if err := c.Load(); err != nil {

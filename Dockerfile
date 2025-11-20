@@ -1,7 +1,9 @@
-FROM golang:1.19 AS builder
+FROM golang:1.22 AS builder
 
 COPY . /src
 WORKDIR /src
+
+RUN apt-get update && apt-get install -y git
 
 RUN GOPROXY=https://goproxy.cn make build
 
@@ -19,6 +21,6 @@ WORKDIR /app
 
 EXPOSE 8000
 EXPOSE 9000
-VOLUME /data/conf
+VOLUME ["/app/configs", "/data/conf"]
 
-CMD ["./server", "-conf", "/data/conf"]
+CMD ["./micro-scheduler", "-conf", "configs"]
