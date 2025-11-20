@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 
 	v1 "micro-scheduler/api/helloworld/v1"
@@ -21,29 +22,37 @@ import (
 	"github.com/hashicorp/consul/api"
 )
 
+// flagconf is the config flag.
+var flagconf string
+
+func init() {
+	flag.StringVar(&flagconf, "conf", "../../../configs/config.yaml", "config path, eg: -conf config.yaml")
+}
+
 func main() {
+	flag.Parse()
 	logger := log.NewStdLogger(os.Stdout)
-	log := log.NewHelper(logger)
+	helper := log.NewHelper(logger)
 
 	// 加载配置文件
 	c := config.New(
 		config.WithSource(
-			file.NewSource("configs/config.yaml"),
+			file.NewSource(flagconf),
 		),
 	)
 	if err := c.Load(); err != nil {
-		log.Fatal(err)
+		helper.Fatal(err)
 	}
 
 	var bc conf.Bootstrap
 	if err := c.Scan(&bc); err != nil {
-		log.Fatal(err)
+		helper.Fatal(err)
 	}
 
 	// 初始化数据层和服务层
 	dataData, cleanup, err := data.NewData(bc.Data, logger) // 使用配置文件中的数据配置
 	if err != nil {
-		log.Fatal(err)
+		helper.Fatal(err)
 	}
 	defer cleanup()
 
@@ -52,11 +61,16 @@ func main() {
 	greeterService := service.NewGreeterService(greeterUsecase)
 
 	// consul client
-	config := api.DefaultConfig()
-	config.Address = "120.27.227.150:8500"
-	consulClient, err := api.NewClient(config)
+	consulConfig := api.DefaultConfig()
+	if bc.Registry.Consul.Address != "" {
+		consulConfig.Address = bc.Registry.Consul.Address
+	}
+	if bc.Registry.Consul.Scheme != "" {
+		consulConfig.Scheme = bc.Registry.Consul.Scheme
+	}
+	consulClient, err := api.NewClient(consulConfig)
 	if err != nil {
-		log.Fatal(err)
+		helper.Fatal(err)
 	}
 	r := consul.New(consulClient) // 把 consulClient 客户端连接添加到 go-kratos 中的registry
 
@@ -91,6 +105,6 @@ func main() {
 	)
 
 	if err := app.Run(); err != nil {
-		log.Fatal(err)
+		helper.Fatal(err)
 	}
 }
